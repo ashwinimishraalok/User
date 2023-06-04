@@ -1,0 +1,31 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+      # - NMS_BUILD_ID=${CODEBUILD_BUILD_ID##*:}CODEBUILD_BUILD_NUMBER
+  build:
+    commands:
+      - docker run --rm --name ncrconfigpanel -v "$CODEBUILD_SRC_DIR":/usr/utils -w /usr/utils 824214588663.dkr.ecr.ap-south-1.amazonaws.com/build/node:14-alpine npm install
+      - docker run --rm --name ncrconfigpanel -v "$CODEBUILD_SRC_DIR":/usr/utils -w /usr/utils 824214588663.dkr.ecr.ap-south-1.amazonaws.com/build/node:14-alpine npm run stage-build
+      - docker run --rm --name ncrconfigpanel -v "$CODEBUILD_SRC_DIR":/usr/utils -w /usr/utils 824214588663.dkr.ecr.ap-south-1.amazonaws.com/build/node:14-alpine npm cache clear -f
+  post_build:
+    commands:
+      - docker build -t 824214588663.dkr.ecr.ap-south-1.amazonaws.com/netmeds/nuttycrunch-configpanel:$CODEBUILD_BUILD_NUMBER -f devops/Dockerfile ./
+      - docker push 824214588663.dkr.ecr.ap-south-1.amazonaws.com/netmeds/nuttycrunch-configpanel:$CODEBUILD_BUILD_NUMBER
+      - echo Writing image definitions file...
+      - printf '{"ImageURI":"%s"}' 824214588663.dkr.ecr.ap-south-1.amazonaws.com/netmeds/nuttycrunch-configpanel:$CODEBUILD_BUILD_NUMBER > imageDetail.json
+# cache:
+#   paths:
+#     - 'node_modules/**/*'
+artifacts:
+    files: 
+      - imageDetail.json
+      - appspec.yaml
+      - taskdef.json

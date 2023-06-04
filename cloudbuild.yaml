@@ -1,0 +1,24 @@
+steps:
+# Install dependencies
+- name: node
+  entrypoint: npm
+  args: ['install']
+
+- name: node
+  entrypoint: npm
+  args: ['run', 'stage-build']
+
+- name: node
+  entrypoint: npm
+  args: ['cache', 'clear', '-f']
+
+- name: gcr.io/cloud-builders/docker
+  args:
+     ["build", "-f", "Dockerfile1", "-t", "gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${SHORT_SHA}", "."]
+
+- name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/${_SERVICE_NAME}"]
+
+artifacts:
+  objects:
+    paths: ['imageDetail.json', 'appspec.yaml', 'taskdef.json']
